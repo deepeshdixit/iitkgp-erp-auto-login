@@ -169,8 +169,22 @@ label {
   color: #f87171;
 }
 
+.opt {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.field-hint {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
 input[type="text"],
-input[type="password"] {
+input[type="password"],
+input[type="email"] {
   background-color: var(--input-bg);
   border: 1px solid var(--border);
   color: var(--text-main);

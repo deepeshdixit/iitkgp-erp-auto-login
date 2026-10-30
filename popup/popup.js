@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const setupPinConfirm = document.getElementById('setup-pin-confirm');
   const setupRollInput = document.getElementById('setup-roll');
   const setupPassInput = document.getElementById('setup-pass');
+  const setupGmailInput = document.getElementById('setup-gmail');
   const btnTogglePass = document.getElementById('btn-toggle-pass');
   const btnCancelEdit = document.getElementById('btn-cancel-edit');
   const btnSave = document.getElementById('btn-save');
@@ -75,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showUnlockView();
       }
     } catch (err) {
-      console.error('Init error:', err);
+      console.warn('Init notice:', err);
       showAlert('Failed to read storage: ' + err.message, 'error');
     }
   }
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       setupPinConfirm.value = pin;
       setupRollInput.value = decrypted.rollNumber || '';
       setupPassInput.value = decrypted.password || '';
+      setupGmailInput.value = decrypted.targetGmail || '';
 
       const qa = decrypted.securityQA || [];
       q1Input.value = qa[0] ? qa[0].question : '';
@@ -182,6 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pinConfirm = setupPinConfirm.value.trim();
     const roll = setupRollInput.value.trim().toUpperCase();
     const password = setupPassInput.value;
+    const gmail = setupGmailInput ? setupGmailInput.value.trim().toLowerCase() : '';
 
     const q1 = q1Input.value.trim();
     const a1 = a1Input.value.trim();
@@ -213,6 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const payload = {
       rollNumber: roll,
       password: password,
+      targetGmail: gmail,
       securityQA: [
         { question: q1, answer: a1 },
         { question: q2, answer: a2 },
@@ -234,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showUnlockView();
       }, 1000);
     } catch (err) {
-      console.error('Save error:', err);
+      console.warn('Save notice:', err);
       showAlert('Failed to encrypt: ' + err.message, 'error');
     } finally {
       btnSave.disabled = false;
