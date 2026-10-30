@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IIT KGP ERP Auto-Login</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-group">
+        <div class="badge-icon">🔐</div>
+        <div>
+          <h2>KGP ERP Login</h2>
+          <p class="subtitle">Secure Client-Side Autofill</p>
+        </div>
+      </div>
+      <span id="status-badge" class="badge">Checking...</span>
+    </header>
+
+    <!-- Message Alert Area -->
+    <div id="alert-box" class="alert hidden"></div>
+
+    <!-- VIEW 1: Unlock Screen (When credentials already exist) -->
+    <section id="view-unlock" class="view hidden">
+      <div class="card">
+        <p class="card-desc">Enter your 4-digit master PIN to unlock or edit your credentials.</p>
+        <div class="form-group">
+          <label for="unlock-pin">4-Digit Master PIN</label>
+          <div class="pin-input-wrap">
+            <input type="password" id="unlock-pin" maxlength="4" placeholder="••••" inputmode="numeric" autocomplete="off" autofocus>
+          </div>
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="session-unlock-chk" checked>
+            <span>Keep unlocked for this browser session</span>
+          </label>
+        </div>
+        <button id="btn-unlock" class="btn btn-primary">Unlock & Manage</button>
+      </div>
+
+      <div class="secondary-actions">
+        <button id="btn-show-reset" class="btn-link text-danger">Reset All Stored Data</button>
+      </div>
+    </section>
+
+    <!-- VIEW 2: Setup / Edit Screen -->
+    <section id="view-setup" class="view hidden">
+      <div class="card">
+        <h3 id="setup-title" class="section-title">Setup Credentials</h3>
+        <p class="card-desc">All information is encrypted with AES-256-GCM and stored only in your local browser profile.</p>
+
+        <form id="creds-form">
+          <!-- PIN Setup -->
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="setup-pin">4-Digit PIN <span class="req">*</span></label>
+              <input type="password" id="setup-pin" maxlength="4" placeholder="e.g. 1234" inputmode="numeric" required>
+            </div>
+            <div class="form-group">
+              <label for="setup-pin-confirm">Confirm PIN <span class="req">*</span></label>
+              <input type="password" id="setup-pin-confirm" maxlength="4" placeholder="e.g. 1234" inputmode="numeric" required>
+            </div>
+          </div>
+
+          <!-- Roll No & Password -->
+          <div class="form-group">
+            <label for="setup-roll">Roll Number / User ID <span class="req">*</span></label>
+            <input type="text" id="setup-roll" placeholder="e.g. 21CS10001" style="text-transform: uppercase;" required>
+          </div>
+
+          <div class="form-group">
+            <label for="setup-pass">ERP Password <span class="req">*</span></label>
+            <div class="input-with-button">
+              <input type="password" id="setup-pass" placeholder="••••••••••••" required>
+              <button type="button" id="btn-toggle-pass" class="btn-icon" title="Toggle visibility">👁️</button>
+            </div>
+          </div>
+
+          <!-- Security Questions Section -->
+          <div class="qa-section">
+            <div class="qa-header">
+              <label class="qa-title">Security Questions & Answers <span class="req">*</span></label>
+              <span class="qa-subtitle">Add all 3 of your registered questions</span>
+            </div>
+
+            <div class="qa-item">
+              <span class="qa-num">Q1</span>
+              <div class="qa-inputs">
+                <input type="text" id="q1" placeholder="Question 1 (e.g., What is your mother's maiden name?)" required>
+                <input type="text" id="a1" placeholder="Answer 1" required>
+              </div>
+            </div>
+
+            <div class="qa-item">
+              <span class="qa-num">Q2</span>
+              <div class="qa-inputs">
+                <input type="text" id="q2" placeholder="Question 2 (e.g., What was the name of your first school?)" required>
+                <input type="text" id="a2" placeholder="Answer 2" required>
+              </div>
+            </div>
+
+            <div class="qa-item">
+              <span class="qa-num">Q3</span>
+              <div class="qa-inputs">
+                <input type="text" id="q3" placeholder="Question 3 (e.g., What is your favorite book?)" required>
+                <input type="text" id="a3" placeholder="Answer 3" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="submit" id="btn-save" class="btn btn-primary">Save & Encrypt</button>
+            <button type="button" id="btn-cancel-edit" class="btn btn-secondary hidden">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 3: Reset Confirmation Modal -->
+    <div id="modal-reset" class="modal hidden">
+      <div class="modal-box">
+        <h4>Reset Stored Credentials?</h4>
+        <p>This will erase your stored roll number, password, security questions, and PIN from this browser. This action cannot be undone.</p>
+        <div class="modal-actions">
+          <button id="btn-confirm-reset" class="btn btn-danger">Yes, Delete All</button>
+          <button id="btn-cancel-reset" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>🛡️ Zero telemetry • Encrypted at rest • Open Source</p>
+    </footer>
+  </div>
+
+  <script src="../crypto.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

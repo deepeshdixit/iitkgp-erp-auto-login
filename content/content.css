@@ -1,0 +1,146 @@
+/* IIT KGP ERP Auto-Login In-Page Widget Styling */
+#kgp-erp-autologin-widget {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 2147483647 !important;
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  padding: 14px 18px !important;
+  border-radius: 12px !important;
+  border: 1px solid #3b82f6 !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-width: 310px !important;
+  max-width: 370px !important;
+  animation: kgpFadeIn 0.25s ease-out !important;
+}
+
+@keyframes kgpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kgp-widget-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  border-bottom: 1px solid #1e293b !important;
+  padding-bottom: 8px !important;
+}
+
+.kgp-widget-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #60a5fa !important;
+}
+
+.kgp-widget-close {
+  background: none !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  font-size: 16px !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+.kgp-widget-close:hover {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.kgp-widget-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.kgp-widget-text {
+  font-size: 11.5px !important;
+  color: #94a3b8 !important;
+  line-height: 1.35 !important;
+}
+
+.kgp-pin-row {
+  display: flex !important;
+  gap: 8px !important;
+  margin-top: 2px !important;
+}
+
+.kgp-pin-input {
+  background: #1e293b !important;
+  border: 1px solid #3b82f6 !important;
+  border-radius: 6px !important;
+  color: #ffffff !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: 6px !important;
+  text-align: center !important;
+  padding: 6px 10px !important;
+  width: 100px !important;
+  outline: none !important;
+}
+
+.kgp-pin-input:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4) !important;
+}
+
+.kgp-btn-fill {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 8px 14px !important;
+  cursor: pointer !important;
+  flex: 1 !important;
+  transition: background 0.15s ease !important;
+  text-align: center !important;
+}
+
+.kgp-btn-fill:hover {
+  background: #1d4ed8 !important;
+}
+
+.kgp-status-box {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+}
+
+.kgp-status-box.success {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid #10b981 !important;
+  color: #34d399 !important;
+}
+
+.kgp-status-box.error {
+  background: rgba(220, 38, 38, 0.15) !important;
+  border: 1px solid #dc2626 !important;
+  color: #f87171 !important;
+}
+
+.kgp-status-box.info {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border: 1px solid #3b82f6 !important;
+  color: #93c5fd !important;
+}
