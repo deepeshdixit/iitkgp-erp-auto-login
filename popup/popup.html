@@ -33,12 +33,6 @@
             <input type="password" id="unlock-pin" maxlength="4" placeholder="••••" inputmode="numeric" autocomplete="off" autofocus>
           </div>
         </div>
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="session-unlock-chk" checked>
-            <span>Keep unlocked for this browser session</span>
-          </label>
-        </div>
         <button id="btn-unlock" class="btn btn-primary">Unlock & Manage</button>
       </div>
 
@@ -78,6 +72,13 @@
               <input type="password" id="setup-pass" placeholder="••••••••••••" required>
               <button type="button" id="btn-toggle-pass" class="btn-icon" title="Toggle visibility">👁️</button>
             </div>
+          </div>
+
+          <!-- Target Gmail (Optional) -->
+          <div class="form-group">
+            <label for="setup-gmail">Target Gmail Address <span class="opt">(Optional)</span></label>
+            <input type="email" id="setup-gmail" placeholder="e.g. yourname@gmail.com">
+            <span class="field-hint">If empty, scans all logged-in Google accounts automatically.</span>
           </div>
 
           <!-- Security Questions Section -->

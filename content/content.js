@@ -1,19 +1,63 @@
 /**
  * IIT KGP ERP Auto-Login - Content Script
- * Executes on erp.iitkgp.ac.in to prompt for the 4-digit PIN,
- * decrypt credentials, dynamically match the security question, request OTP, and focus OTP input.
- * Built with strict concurrency locking to ensure autofill & OTP request only run once.
+ * Executes on erp.iitkgp.ac.in strictly on login forms to prompt for the 4-digit PIN,
+ * decrypt credentials, dynamically match the security question, request OTP,
+ * and automatically receive & fill OTP from the target Gmail feed.
+ * Built with path-based routing (immune to requestedUrl query parameters).
  */
 
 (function () {
   if (window.__KGP_ERP_AUTOLOGIN_INJECTED__) return;
   window.__KGP_ERP_AUTOLOGIN_INJECTED__ = true;
 
-  console.log('[KGP-ERP-AutoLogin] Content script active on:', window.location.href);
-
-  // Global execution locks to prevent duplicate triggers
+  // Global execution locks
   let isUnlocking = false;
   let hasCompletedFill = false;
+
+  /**
+   * Checks whether the actual page path is an explicit login page
+   */
+  function isExplicitLoginPage() {
+    const path = window.location.pathname.toLowerCase();
+    return path === '/' ||
+      path === '' ||
+      path.includes('login') ||
+      path.includes('auth.htm');
+  }
+
+  /**
+   * Checks whether the actual page path belongs to an authenticated inner dashboard
+   * (Evaluates ONLY the pathname, ignoring query string parameters like ?requestedUrl=...showmenu.htm)
+   */
+  function isDashboardPath() {
+    const path = window.location.pathname.toLowerCase();
+    return path.includes('showmenu') ||
+      path.includes('menu.htm') ||
+      path.includes('dashboard') ||
+      path.includes('home.htm') ||
+      path.includes('/academic/') ||
+      path.includes('/admission/') ||
+      path.includes('/feedback/') ||
+      path.includes('/cdc/') ||
+      path.includes('welcome.htm');
+  }
+
+  /**
+   * Checks whether the page has an active logged-in session
+   */
+  function isUserLoggedIn() {
+    // 1. Check for standard logout/signout anchors
+    const logout = document.querySelector('a[href*="logout" i], a[href*="signout" i], [id*="logout" i], [class*="logout" i]');
+    if (logout) return true;
+
+    // 2. Check for dashboard navigation or sidebar without a login password input
+    const nav = document.querySelector('#sidebar, .sidebar, #menu, .navbar-nav, .user-profile, #header');
+    if (nav && !document.querySelector('input[type="password"]')) {
+      return true;
+    }
+
+    return false;
+  }
 
   /**
    * Dispatches input, change, and blur events
@@ -98,7 +142,7 @@
   }
 
   /**
-   * Element Finders
+   * Element Finders (Comprehensive login field coverage)
    */
   function findUserIdInput() {
     return document.getElementById('user_id') ||
@@ -106,11 +150,13 @@
       document.getElementById('rollno') ||
       document.querySelector('input[name="rollno"]') ||
       document.querySelector('input[name="roll_no"]') ||
+      document.getElementById('login_id') ||
+      document.querySelector('input[name="login_id"]') ||
+      document.querySelector('input[name="loginId"]') ||
       document.querySelector('input[id*="user" i]') ||
       document.querySelector('input[name*="user" i]') ||
       document.querySelector('input[placeholder*="roll" i]') ||
-      document.querySelector('input[placeholder*="user" i]') ||
-      document.querySelector('input[type="text"]');
+      document.querySelector('input[placeholder*="user" i]');
   }
 
   function findPasswordInput() {
@@ -159,15 +205,15 @@
   }
 
   /**
-   * Polls until login inputs exist
+   * Polls until both login inputs exist
    */
-  function waitForLoginInputs(maxWaitMs = 6000) {
+  function waitForLoginInputs(maxWaitMs = 3500) {
     return new Promise((resolve) => {
       const start = Date.now();
       const check = () => {
         const u = findUserIdInput();
         const p = findPasswordInput();
-        if (u || p) return resolve({ userInput: u, passInput: p });
+        if (u && p) return resolve({ userInput: u, passInput: p });
         if (Date.now() - start >= maxWaitMs) {
           return resolve({ userInput: findUserIdInput(), passInput: findPasswordInput() });
         }
@@ -198,10 +244,10 @@
   }
 
   /**
-   * Performs the credential autofill and requests OTP exactly ONCE
+   * Performs the credential autofill and requests OTP
    */
   async function performAutoFill(creds, updateStatus) {
-    const { userInput, passInput } = await waitForLoginInputs(3000);
+    const { userInput, passInput } = await waitForLoginInputs(3500);
 
     if (!userInput || !passInput) {
       if (updateStatus) updateStatus('Login fields not found.', 'error');
@@ -243,24 +289,82 @@
     const otpBtn = findGetOtpButton();
     if (otpBtn) {
       otpBtn.click();
-      if (updateStatus) updateStatus('OTP requested! Check email.', 'success');
+      const msg = creds.targetGmail
+        ? `OTP requested! Listening to ${creds.targetGmail}...`
+        : 'OTP requested! Auto-fetching from Gmail...';
+      if (updateStatus) updateStatus(msg, 'info');
+
+      // Request background service worker to start polling the Gmail Atom feed
+      chrome.runtime.sendMessage({
+        action: 'START_GMAIL_OTP_POLLING',
+        startTime: Date.now() - 30000,
+        targetGmail: creds.targetGmail || ''
+      });
     } else {
       if (updateStatus) updateStatus('Filled! Click "Get OTP".', 'info');
     }
 
-    // 5. Focus the OTP input field for manual entry
+    // 5. Focus the OTP input field for manual entry fallback
     await new Promise(r => setTimeout(r, 400));
     const otpInput = findOtpInput();
     if (otpInput) {
       otpInput.focus();
+      otpInput.addEventListener('input', () => {
+        // If user enters OTP manually, stop background polling
+        chrome.runtime.sendMessage({ action: 'STOP_GMAIL_OTP_POLLING' });
+      }, { once: true });
     }
   }
+
+  /**
+   * Listen for OTP detected by background Gmail poller
+   */
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === 'OTP_DETECTED') {
+      const otpInput = findOtpInput();
+      if (otpInput) {
+        otpInput.value = message.otp;
+        triggerEvents(otpInput);
+        console.log('[KGP-ERP-AutoLogin] Auto-filled OTP from Gmail:', message.otp);
+
+        const widget = document.getElementById('kgp-erp-autologin-widget');
+        const statusBox = document.getElementById('kgp-widget-status');
+        if (statusBox) {
+          statusBox.textContent = `✅ OTP ${message.otp} auto-filled from Gmail!`;
+          statusBox.className = 'kgp-status-box success';
+          statusBox.classList.remove('hidden');
+        }
+
+        // Focus Log In button
+        const loginBtn = document.querySelector('button[type="submit"]') ||
+          Array.from(document.querySelectorAll('button, input[type="submit"]')).find(b => /log\s*in/i.test(b.innerText || b.value));
+        if (loginBtn) {
+          loginBtn.focus();
+        }
+
+        // Dismiss widget after filling
+        if (widget) {
+          setTimeout(() => {
+            widget.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            widget.style.opacity = '0';
+            widget.style.transform = 'translateY(-14px)';
+            setTimeout(() => widget.remove(), 300);
+          }, 1500);
+        }
+      }
+    } else if (message.action === 'OTP_TIMEOUT') {
+      const statusBox = document.getElementById('kgp-widget-status');
+      if (statusBox) {
+        statusBox.textContent = 'Gmail check timed out. Please enter code manually.';
+        statusBox.className = 'kgp-status-box info';
+      }
+    }
+  });
 
   /**
    * Renders the in-page PIN prompt widget.
    */
   function renderPromptWidget(encryptedCreds) {
-    // Only render once per page load
     if (document.getElementById('kgp-erp-autologin-widget') || hasCompletedFill) return;
 
     const widget = document.createElement('div');
@@ -290,7 +394,7 @@
           <button class="kgp-widget-close" id="kgp-widget-close" title="Dismiss">×</button>
         </div>
         <div class="kgp-widget-body">
-          <p class="kgp-widget-text">Enter your 4-digit PIN to autofill and request OTP:</p>
+          <p class="kgp-widget-text">Enter your 4-digit PIN to autofill and fetch OTP:</p>
           <div class="kgp-pin-row">
             <input type="password" id="kgp-widget-pin" class="kgp-pin-input" maxlength="4" placeholder="••••" inputmode="numeric" autofocus autocomplete="off">
             <button id="kgp-widget-btn" class="kgp-btn-fill">Unlock & Fill</button>
@@ -333,7 +437,6 @@
     }
 
     async function handleUnlock() {
-      // Guard against duplicate invocations
       if (isUnlocking || hasCompletedFill) return;
 
       const pin = pinInput.value.trim();
@@ -342,7 +445,6 @@
         return;
       }
 
-      // Lock execution immediately
       isUnlocking = true;
       pinInput.disabled = true;
       fillBtn.disabled = true;
@@ -352,26 +454,14 @@
       try {
         const decrypted = await ERP_CRYPTO.decrypt(encryptedCreds, pin);
 
-        updateStatus('Unlocked! Filling form...', 'info');
+        updateStatus('Unlocked! Filling credentials...', 'info');
         await performAutoFill(decrypted, updateStatus);
 
         hasCompletedFill = true;
         fillBtn.textContent = 'Filled!';
-        updateStatus('Done! Enter OTP to log in.', 'success');
-
-        // Dismiss and remove widget immediately after filling so it cannot capture further keys
-        setTimeout(() => {
-          widget.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-          widget.style.opacity = '0';
-          widget.style.transform = 'translateY(-14px)';
-          setTimeout(() => {
-            widget.remove();
-          }, 300);
-        }, 800);
-
       } catch (err) {
-        console.error('[KGP-ERP-AutoLogin] Decryption error:', err);
-        updateStatus('Incorrect PIN', 'error');
+        console.warn('[KGP-ERP-AutoLogin] PIN verification failed: Incorrect PIN');
+        updateStatus('Incorrect PIN. (Forgot? Click extension icon to reset)', 'error');
         pinInput.disabled = false;
         fillBtn.disabled = false;
         pinInput.value = '';
@@ -393,7 +483,6 @@
       }
     });
 
-    // Auto-trigger when 4 digits are typed, with debounce to prevent duplicate events
     pinInput.addEventListener('input', () => {
       if (pinInput.value.length === 4 && !isUnlocking && !hasCompletedFill) {
         handleUnlock();
@@ -405,16 +494,31 @@
 
   /**
    * Main Initialization:
-   * Only renders in the frame containing the actual login inputs
+   * Accurately distinguishes login forms from inner dashboards using pathname inspection.
    */
   async function init() {
-    const url = window.location.href.toLowerCase();
-    const isLoginUrl = url.includes('login') || url.includes('ssoadministration') || url.includes('studentperformance');
+    // 1. If explicitly on an inner dashboard path, abort
+    if (isDashboardPath()) {
+      return;
+    }
 
-    const { userInput, passInput } = await waitForLoginInputs(isLoginUrl ? 3000 : 800);
+    // 2. If the page shows the user is already logged in, abort
+    if (isUserLoggedIn()) {
+      return;
+    }
 
-    // Only render the widget in the specific frame that holds the login inputs
-    if (!userInput && !passInput) {
+    // 3. Check if this is an explicit login page
+    const isLogin = isExplicitLoginPage();
+
+    // 4. Wait for both User ID and Password fields
+    const { userInput, passInput } = await waitForLoginInputs(isLogin ? 3500 : 800);
+    if (!userInput || !passInput) {
+      return;
+    }
+
+    // 5. Ensure password field is visible
+    const passStyle = window.getComputedStyle(passInput);
+    if (passStyle.display === 'none' || passStyle.visibility === 'hidden') {
       return;
     }
 
@@ -424,7 +528,7 @@
 
       renderPromptWidget(encryptedCreds);
     } catch (err) {
-      console.error('[KGP-ERP-AutoLogin] Init error:', err);
+      console.warn('[KGP-ERP-AutoLogin] Init notice:', err);
     }
   }
 
